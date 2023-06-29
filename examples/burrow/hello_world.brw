@@ -1,0 +1,51 @@
+!macro mov a b:
+    ldi %m, 0x00
+    or $a, $b, %m;
+
+!macro addi dest a imm:
+    ldi %m, $imm
+    add $dest, $a, %imm;
+
+!macro subi dest a imm:
+    ldi %m, $imm
+    add $dest, $a, %imm;
+
+!macro cmp a b:
+    sub %m, $a, $b;
+
+!macro push a:
+    str %sp, $a
+    ldi %m, 0x2
+    sub %sp, %sp, %m;
+
+!macro pushb a:
+    strb %sp, $a
+    dec %sp;
+
+!macro strii dest v:
+    ldi %m, $v
+    stri %m, $dest;
+
+.start:
+    strii 0x7f00, 0x1   # set value of 0x7f00 to 1.
+                        # this initializes the graphics mode to text.
+    ldi %a, 0x41 # set the value of %a to 0x41 ('A').
+    ldi %c, 0x1000 # set the value of %c to 0x1000.
+
+.BUFLOOP
+    strb %c, %a # set the value of the address stored in %c to %a.
+    addi %a, %a, 1 # add 1 to %a.
+    addi %c, %c, 1 # add 1 to %c.
+    cmp %a, 0x5a # compare %a to 0x5a ('Z').
+    jl .BUFLOOP # if %a is less than 0x5a, jump to .BUFLOOP.
+
+    ldi %a, 0x1
+    ldi %b, 0x1000 # set the value of %b to 0x1000.
+    ldi %c, 25
+    sys     # call the system call in %a 0x1 (print buffer: behavior depends on graphics mode).
+            # uses the value of %b as the address of the buffer to print.
+            # uses the value of %c as the length of the buffer to print.
+
+    xor %a, %a, %a
+
+    sys

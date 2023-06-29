@@ -1,0 +1,14 @@
+!macro mov dest src:
+    ldi %m, 0x00 # assume we have the %m register available in macros
+    or $dest, $src, %m;
+
+.start:
+    ldi %b, 0x41
+    mov %a, %b
+    stib %a, 0x6000
+    ldi %a, 0x01
+    ldi %b, 0x6000
+    ldi %c, 0x01
+    sys
+    xor %a, %a, %a
+    sys
