@@ -41,6 +41,8 @@ void squirm_cpu_reset(squirm_cpu_t* cpu) {
     cpu->reg[BURROW_REG_IP] = BURROW_MEM_CODE_START;
     cpu->reg[BURROW_REG_SP] = BURROW_MEM_STACK_START;
     cpu->reg[BURROW_REG_FL] = BURROW_FL_NONE;
+
+    cpu->executed_op_count = 0;
 }
 
 void squirm_cpu_load(squirm_cpu_t* cpu, u8* data, u16 size) {
@@ -260,7 +262,7 @@ OP_HANDLER(sys) {
 
 // clang-format off
 
-static squirm_cpu_op_fn op_handlers[BURROW_OP_COUNT] = {
+static const squirm_cpu_op_fn k_op_handlers[BURROW_OP_COUNT] = {
     OP_HANDLER_NAME(nop),
     OP_HANDLER_NAME(ldi),
     OP_HANDLER_NAME(ldr),
@@ -308,5 +310,6 @@ void squirm_cpu_step(squirm_cpu_t* cpu) {
         return;
     }
     cpu->reg[BURROW_REG_IP] += 4;
-    op_handlers[op.op](cpu, op);
+    cpu->executed_op_count++;
+    k_op_handlers[op.op](cpu, op);
 }

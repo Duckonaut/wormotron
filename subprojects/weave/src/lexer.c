@@ -4,6 +4,45 @@
 #include <stdlib.h>
 #include <string.h>
 
+const char* weave_token_ty_str(weave_token_ty_t ty) {
+    switch (ty) {
+        case WEAVE_TOKEN_INVALID:
+            return "Invalid";
+        case WEAVE_TOKEN_EOF:
+            return "EOF";
+        case WEAVE_TOKEN_NEWLINE:
+            return "NEWLINE";
+        case WEAVE_TOKEN_COMMA:
+            return "COMMA";
+        case WEAVE_TOKEN_COLON:
+            return "COLON";
+        case WEAVE_TOKEN_PERCENT:
+            return "PERCENT";
+        case WEAVE_TOKEN_DOLLAR:
+            return "DOLLAR";
+        case WEAVE_TOKEN_DOT:
+            return "DOT";
+        case WEAVE_TOKEN_BANG:
+            return "BANG";
+        case WEAVE_TOKEN_MINUS:
+            return "MINUS";
+        case WEAVE_TOKEN_SEMICOLON:
+            return "SEMICOLON";
+        case WEAVE_TOKEN_MACRO:
+            return "MACRO";
+        case WEAVE_TOKEN_IDENTIFIER:
+            return "IDENTIFIER";
+        case WEAVE_TOKEN_INT:
+            return "INT";
+        case WEAVE_TOKEN_STR:
+            return "STR";
+        case WEAVE_TOKEN_CHAR:
+            return "CHAR";
+    }
+
+    return "Unknown";
+}
+
 const char* weave_lexer_error_str(weave_lexer_error_t error) {
     switch (error) {
         case WEAVE_LEXER_ERROR_NONE:

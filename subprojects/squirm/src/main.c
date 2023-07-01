@@ -6,6 +6,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 
 typedef struct args {
@@ -101,12 +103,25 @@ int main(int argc, char* argv[]) {
 
     squirm_cpu_reset(&cpu);
 
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+
     while (1) {
         squirm_cpu_step(&cpu);
         if (cpu.reg[BURROW_REG_FL] & BURROW_FL_FIN) {
             break;
         }
     }
+
+    gettimeofday(&end, NULL);
+
+    // get elapsed microseconds
+    u64 elapsed = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
+
+    printf("Elapsed: %ld us\n", elapsed);
+    printf("Instructions: %ld\n", cpu.executed_op_count);
+
+    printf("Frequency: %ld Hz\n", cpu.executed_op_count * 1000000 / elapsed);
 
     free(rom);
 

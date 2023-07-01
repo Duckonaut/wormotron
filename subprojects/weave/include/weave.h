@@ -15,6 +15,17 @@ typedef struct burrow_op {
     } regs;
 } burrow_op_t;
 
+typedef struct weave_label {
+    char* name;
+    u16 addr;
+    bool defined;
+
+    u16* unresolved_refs;
+    usize unresolved_refs_len;
+    usize unresolved_refs_cap;
+} weave_label_t;
+
+#define WEAVE_MAX_LABELS 256
 
 typedef struct weave {
     FILE* output;
@@ -22,6 +33,12 @@ typedef struct weave {
 
     // state
     weave_token_t token;
+    u16 addr;
+
+    // labels
+    // TODO: use a hash table
+    weave_label_t labels[WEAVE_MAX_LABELS];
+    u16 num_labels;
 
     bool at_eof;
 } weave_t;

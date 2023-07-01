@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include <string.h>
 
 // Burrow: A 16-bit instruction set.
 //
@@ -85,6 +86,8 @@
 #define BURROW_OP_STRB 0x14
 #define BURROW_OP_SYS 0x15
 
+#define BURROW_OP_INVALID 0xff
+
 #define BURROW_OP_COUNT 22
 
 #define BURROW_REG_BIT_SIZE 16
@@ -121,6 +124,8 @@
 #define BURROW_REG_IP 0x1e
 #define BURROW_REG_SP 0x1d
 
+#define BURROW_REG_INVALID 0xff
+
 #define BURROW_FL_NONE 0x00
 #define BURROW_FL_ZERO 0x01     // 0000 0001
 #define BURROW_FL_CARRY 0x02    // 0000 0010
@@ -143,3 +148,29 @@
 #define BURROW_SYS_EXIT 0x00
 #define BURROW_SYS_PRINT 0x01
 #define BURROW_SYS_MAX_SYSCALLS 0x20
+
+static inline u8 burrow_register_from_str(const char* str, size_t len) {
+    if (len == 1) {
+        char val = str[0];
+
+        if (val >= 'a' && val <= 'z') {
+            return (u8)(val - 'a') + BURROW_REG_A;
+        } else if (val >= 'A' && val <= 'Z') {
+            return (u8)(val - 'A') + BURROW_REG_A;
+        } else {
+            return 0xff;
+        }
+    } else if (len == 2) {
+        if (strncmp(str, "ip", 2) == 0 || strncmp(str, "IP", 2) == 0) {
+            return BURROW_REG_IP;
+        } else if (strncmp(str, "sp", 2) == 0 || strncmp(str, "SP", 2) == 0) {
+            return BURROW_REG_SP;
+        } else if (strncmp(str, "fl", 2) == 0 || strncmp(str, "FL", 2) == 0) {
+            return BURROW_REG_FL;
+        } else {
+            return 0xff;
+        }
+    }
+
+    return 0xff;
+}

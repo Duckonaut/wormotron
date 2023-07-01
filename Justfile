@@ -52,7 +52,7 @@ run: build
 	./build/wormotron.exe
 
 [unix]
-weave IN OUT="-": build
+weave IN OUT="a.out": build
 	./build/subprojects/weave/weave "{{IN}}" -o "{{OUT}}"
 
 [unix]

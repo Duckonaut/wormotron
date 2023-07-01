@@ -1,0 +1,18 @@
+!macro iters_sqrt: 10000;
+
+.start:
+    ldi %b, iters_sqrt
+    ldi %c, 1
+
+.loop_outer:
+    sub %b, %b, %c
+    ldi %a, iters_sqrt
+    jz .end
+.loop_inner:
+    sub %a, %a, %c
+    jz .loop_outer
+    jmp .loop_inner
+
+.end:
+    xor %a, %a, %a
+    sys

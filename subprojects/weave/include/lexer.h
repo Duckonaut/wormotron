@@ -28,6 +28,8 @@ typedef enum weave_token_ty {
     WEAVE_TOKEN_CHAR,       // 'c'
 } weave_token_ty_t;
 
+const char* weave_token_ty_str(weave_token_ty_t ty);
+
 typedef union weave_token_val {
     i32 int_val;
     struct {

@@ -9,6 +9,7 @@
 typedef struct squirm_cpu {
     u16 reg[BURROW_REG_COUNT];
     u8 mem[SQUIRM_MEM_SIZE];
+    usize executed_op_count;
 } squirm_cpu_t;
 
 typedef struct squirm_op {

@@ -302,7 +302,11 @@ weave_preprocessor_step_current_macro_invocation(weave_preprocessor_t* preproces
         preprocessor->current_macro_arg_expansion_index = 0;
         preprocessor->in_macro_arg_expansion = false;
 
-        WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+        result.is_ok = true;
+        result.ok.is_ok = true;
+        result.ok.ok.ty = WEAVE_TOKEN_NEWLINE;
+        result.ok.ok.pos.line = preprocessor->lexer->line;
+        result.ok.ok.pos.col = preprocessor->lexer->col;
 
         return result;
     }
