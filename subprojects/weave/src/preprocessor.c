@@ -61,6 +61,7 @@ void weave_preprocessor_free(weave_preprocessor_t* preprocessor) {
     }
     free(preprocessor->macro_names);
     free(preprocessor->macros);
+    weave_lexer_free(preprocessor->lexer);
     free(preprocessor);
 }
 

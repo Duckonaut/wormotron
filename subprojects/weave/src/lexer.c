@@ -59,17 +59,20 @@ weave_token_t weave_token_clone(weave_token_t *token) {
     }
 }
 
-void weave_lexer_init(weave_lexer_t* lexer, FILE* input) {
+weave_lexer_t* weave_lexer_new(FILE* input) {
+    weave_lexer_t* lexer = malloc(sizeof(weave_lexer_t));
+
     lexer->input = input;
     lexer->line = 1;
     lexer->col = 1;
     lexer->pos = 0;
     lexer->c = fgetc(input);
+
+    return lexer;
 }
 
 void weave_lexer_free(weave_lexer_t* lexer) {
-    (void)lexer; // unused
-    // nothing to do
+    free(lexer);
 }
 
 static void weave_lexer_advance(weave_lexer_t* lexer) {

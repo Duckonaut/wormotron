@@ -1,0 +1,23 @@
+.start:
+    ldi %a, 0x8000
+    ldi %e, 18 # max_x = 18
+    ldi %d, 12 # max_y = 12
+    ldi %b, 0
+    ldi %o, 1
+
+.ROW:
+    ldi %c, 0
+    sub %m, %d, %b
+    jz .END
+.COLUMN:
+    sub %m, %e, %c
+    jz .ROW
+    
+    strb
+
+
+.tileset:
+    data !bininc "worm_tileset.bin"
+
+.tilemap:
+    da

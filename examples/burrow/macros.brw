@@ -2,6 +2,9 @@
     ldi %m, 0x00 # assume we have the %m register available in macros
     or $dest, $src, %m;
 
+!macro zero a:
+    xor $a, $a, $a;
+
 .start:
     ldi %b, 0x41
     mov %a, %b
@@ -10,5 +13,5 @@
     ldi %b, 0x6000
     ldi %c, 0x01
     sys
-    xor %a, %a, %a
+    zero %a
     sys

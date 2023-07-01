@@ -79,7 +79,7 @@ const char* weave_lexer_error_str(weave_lexer_error_t error);
 
 typedef RESULT_TYPE(weave_token_t, weave_lexer_error_t) weave_lexer_result_t;
 
-void weave_lexer_init(weave_lexer_t* lexer, FILE* input);
+weave_lexer_t* weave_lexer_new(FILE* input);
 void weave_lexer_free(weave_lexer_t* lexer);
 
 weave_lexer_result_t weave_lexer_next(weave_lexer_t* lexer);
