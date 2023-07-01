@@ -19,7 +19,9 @@ static weave_t* weave_new(weave_preprocessor_t* preprocessor, FILE* output) {
     weave->preprocessor = preprocessor;
     weave->output = output;
 
+    weave->num_labels = 0;
     weave->at_eof = false;
+    weave->token.ty = WEAVE_TOKEN_INVALID;
 
     weave_advance(weave);
 
@@ -29,7 +31,11 @@ static weave_t* weave_new(weave_preprocessor_t* preprocessor, FILE* output) {
 static void weave_free(weave_t* weave) {
     for (size_t i = 0; i < weave->num_labels; i++) {
         free(weave->labels[i].name);
+        if (weave->labels[i].unresolved_refs) {
+            free(weave->labels[i].unresolved_refs);
+        }
     }
+    weave_token_free(&weave->token);
     weave_preprocessor_free(weave->preprocessor);
     free(weave);
 }
@@ -57,16 +63,17 @@ static void weave_register_label(weave_t* weave, const weave_token_t* label) {
 
     for (size_t i = 0; i < weave->num_labels; i++) {
         if (strlen(weave->labels[i].name) == label->val.str_val.len &&
-            memcmp(weave->labels[i].name, label->val.str_val.val, label->val.str_val.len) == 0) {
+            memcmp(weave->labels[i].name, label->val.str_val.val, label->val.str_val.len) ==
+                0) {
             if (weave->labels[i].defined) {
-            LOG_ERROR(
-                "internal error at %d:%d: Label '%.*s' already defined\n",
-                label->pos.line,
-                label->pos.col,
-                label->val.str_val.len,
-                label->val.str_val.val
-            );
-            exit(1);
+                LOG_ERROR(
+                    "internal error at %d:%d: Label '%.*s' already defined\n",
+                    label->pos.line,
+                    label->pos.col,
+                    label->val.str_val.len,
+                    label->val.str_val.val
+                );
+                exit(1);
             } else {
                 weave->labels[i].defined = true;
                 weave->labels[i].addr = weave->addr;
@@ -120,9 +127,7 @@ weave_get_label_value(weave_t* weave, const char* label_name, size_t label_name_
 
     // not found, register new label as unresolved
     if (weave->num_labels == WEAVE_MAX_LABELS) {
-        LOG_ERROR(
-            "internal error: Too many labels\n"
-        );
+        LOG_ERROR("internal error: Too many labels\n");
         exit(1);
     }
 
@@ -514,6 +519,10 @@ static void weave_print_token(weave_token_t token) {
 }
 
 static void weave_advance(weave_t* weave) {
+    if (weave->token.ty != WEAVE_TOKEN_INVALID) {
+        weave_token_free(&weave->token);
+    }
+
     weave_preprocessor_result_t result = weave_preprocessor_next(weave->preprocessor);
 
     if (!result.is_ok) {
