@@ -20,6 +20,7 @@ static weave_t* weave_new(weave_preprocessor_t* preprocessor, FILE* output) {
     weave->output = output;
 
     weave->num_labels = 0;
+    weave->addr = 0;
     weave->at_eof = false;
     weave->token.ty = WEAVE_TOKEN_INVALID;
 
@@ -339,7 +340,7 @@ static u8 weave_op_from_str(const char* str, size_t len) {
 }
 
 static void weave_parse_instruction(weave_t* weave) {
-    burrow_op_t op = { 0 };
+    burrow_op_t op = {0};
 
     if (weave->token.ty != WEAVE_TOKEN_IDENTIFIER) {
         LOG_ERROR(
@@ -455,8 +456,9 @@ static void weave_run(weave_t* weave) {
         } else {
             for (size_t j = 0; j < label->unresolved_refs_len; j++) {
                 u16 addr = label->unresolved_refs[j];
+                usize addr_full = (usize)addr;
 
-                fseek(weave->output, addr, SEEK_SET);
+                fseek(weave->output, addr_full, SEEK_SET);
                 u8 low_byte = label->addr & 0xFF;
                 u8 high_byte = (label->addr >> 8) & 0xFF;
                 // write high byte first
