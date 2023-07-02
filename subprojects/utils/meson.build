@@ -13,6 +13,7 @@ util_inc = include_directories(util_inc_dirs)
 
 util_src = [
   'src/log.c',
+  'src/utils.c',
 ]
 
 utils_lib = static_library('utils',
