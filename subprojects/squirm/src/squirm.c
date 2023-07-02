@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static squirm_cpu_syscall_fn syscall_handlers[BURROW_SYS_MAX_SYSCALLS];
+squirm_cpu_t* squirm_cpu_new(squirm_cpu_syscall_fn* syscalls, u16 num_sys) {
+    squirm_cpu_t* cpu = malloc(sizeof(squirm_cpu_t));
 
-void squirm_cpu_init(squirm_cpu_t* cpu, squirm_cpu_syscall_fn* syscalls, u16 num_sys) {
     for (int i = 0; i < BURROW_REG_COUNT; i++) {
         cpu->reg[i] = 0;
     }
@@ -24,13 +24,28 @@ void squirm_cpu_init(squirm_cpu_t* cpu, squirm_cpu_syscall_fn* syscalls, u16 num
     }
 
     for (int i = 0; i < num_sys; i++) {
-        syscall_handlers[i] = syscalls[i];
+        cpu->syscalls[i] = syscalls[i];
     }
+
+    cpu->syscall_count = num_sys;
+
+    cpu->mmio_count = 0;
+
+    return cpu;
+}
+
+void squirm_cpu_add_mmio_entry(squirm_cpu_t* cpu, squirm_mmio_entry_t entry) {
+    if (cpu->mmio_count >= SQUIRM_MMIO_MAX) {
+        LOG_ERROR("too many MMIO entries: %d\n", cpu->mmio_count);
+        exit(1);
+    }
+
+    cpu->mmio[cpu->mmio_count++] = entry;
+    LOG_DEBUG("added MMIO entry from %04X to %04X\n", entry.start, entry.end);
 }
 
 void squirm_cpu_free(squirm_cpu_t* cpu) {
-    (void)cpu; // unused
-    // nothing to do
+    free(cpu);
 }
 
 void squirm_cpu_reset(squirm_cpu_t* cpu) {
@@ -109,6 +124,21 @@ OP_HANDLER(ldi) {
 OP_HANDLER(ldr) {
     u8 dest = op.args.dest;
     u16 addr = squirm_op_imm(op);
+
+    for (int i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.read == NULL) {
+                return;
+            }
+            u8 value_hi = entry.read(addr);
+            u8 value_lo = entry.read(addr + 1);
+            u16 value = value_hi | (value_lo << 8);
+            squirm_cpu_write_reg(cpu, dest, value);
+            return;
+        }
+    }
+
     u16 value = squirm_cpu_read16(cpu, addr);
     squirm_cpu_write_reg(cpu, dest, value);
 }
@@ -116,6 +146,17 @@ OP_HANDLER(ldr) {
 OP_HANDLER(ldrb) {
     u8 dest = op.args.dest;
     u16 addr = squirm_op_imm(op);
+    for (int i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.read == NULL) {
+                return;
+            }
+            u8 value = entry.read(addr);
+            squirm_cpu_write_reg(cpu, dest, value);
+            return;
+        }
+    }
     u8 value = squirm_cpu_read8(cpu, addr);
     squirm_cpu_write_reg(cpu, dest, value);
 }
@@ -153,6 +194,13 @@ OP_HANDLER(mul) {
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
     u16 result = squirm_cpu_read_reg(cpu, a) * squirm_cpu_read_reg(cpu, b);
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -160,7 +208,22 @@ OP_HANDLER(div) {
     u8 dest = op.args.dest;
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
-    u16 result = squirm_cpu_read_reg(cpu, a) / squirm_cpu_read_reg(cpu, b);
+    
+    u16 b_value = squirm_cpu_read_reg(cpu, b);
+
+    if (b_value == 0) {
+        LOG_ERROR("division by zero\n");
+        exit(1);
+    }
+
+    u16 result = squirm_cpu_read_reg(cpu, a) / b_value;
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -168,7 +231,21 @@ OP_HANDLER(mod) {
     u8 dest = op.args.dest;
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
-    u16 result = squirm_cpu_read_reg(cpu, a) % squirm_cpu_read_reg(cpu, b);
+    u16 b_value = squirm_cpu_read_reg(cpu, b);
+
+    if (b_value == 0) {
+        LOG_ERROR("division by zero\n");
+        exit(1);
+    }
+
+    u16 result = squirm_cpu_read_reg(cpu, a) % b_value;
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -177,6 +254,13 @@ OP_HANDLER(and) {
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
     u16 result = squirm_cpu_read_reg(cpu, a) & squirm_cpu_read_reg(cpu, b);
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -185,6 +269,13 @@ OP_HANDLER(or) {
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
     u16 result = squirm_cpu_read_reg(cpu, a) | squirm_cpu_read_reg(cpu, b);
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -193,6 +284,13 @@ OP_HANDLER(xor) {
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
     u16 result = squirm_cpu_read_reg(cpu, a) ^ squirm_cpu_read_reg(cpu, b);
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -201,6 +299,13 @@ OP_HANDLER(shl) {
     u8 a = op.args.src_a;
     u16 b = squirm_cpu_read_reg(cpu, op.args.src_b);
     u16 result = squirm_cpu_read_reg(cpu, a) << b;
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -209,6 +314,13 @@ OP_HANDLER(shr) {
     u8 a = op.args.src_a;
     u16 b = squirm_cpu_read_reg(cpu, op.args.src_b);
     u16 result = squirm_cpu_read_reg(cpu, a) >> b;
+
+    if (result == 0) {
+        squirm_cpu_set_flag(cpu, BURROW_FL_ZERO);
+    } else {
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
+    }
+
     squirm_cpu_write_reg(cpu, dest, result);
 }
 
@@ -221,6 +333,7 @@ OP_HANDLER(jz) {
     u16 addr = squirm_op_imm(op);
     if (squirm_cpu_flags(cpu) & BURROW_FL_ZERO) {
         cpu->reg[BURROW_REG_IP] = addr;
+        squirm_cpu_set_flags(cpu, squirm_cpu_flags(cpu) & ~BURROW_FL_ZERO);
     }
 }
 
@@ -232,24 +345,78 @@ OP_HANDLER(jd) {
 OP_HANDLER(sti) {
     u16 addr = squirm_op_imm(op);
     u16 value = squirm_cpu_read_reg(cpu, op.args.dest);
+
+    for (u16 i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.write == NULL) {
+                return;
+            }
+            u8 value_hi = (value >> 8) & 0xff;
+            u8 value_lo = value & 0xff;
+            entry.write(addr, value_hi);
+            entry.write(addr + 1, value_lo);
+            return;
+        }
+    }
+
     squirm_cpu_write16(cpu, addr, value);
 }
 
 OP_HANDLER(stib) {
     u16 addr = squirm_op_imm(op);
     u8 value = squirm_cpu_read_reg(cpu, op.args.dest);
+
+    for (u16 i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.write == NULL) {
+                return;
+            }
+            cpu->mmio[i].write(addr, value);
+            return;
+        }
+    }
+
     squirm_cpu_write8(cpu, addr, value);
 }
 
 OP_HANDLER(str) {
     u16 addr = squirm_cpu_read_reg(cpu, op.args.dest);
     u16 value = squirm_cpu_read_reg(cpu, op.args.src_a);
+
+    for (u16 i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.write == NULL) {
+                return;
+            }
+            u8 value_hi = (value >> 8) & 0xff;
+            u8 value_lo = value & 0xff;
+            entry.write(addr, value_hi);
+            entry.write(addr + 1, value_lo);
+            return;
+        }
+    }
+
     squirm_cpu_write16(cpu, addr, value);
 }
 
 OP_HANDLER(strb) {
     u16 addr = squirm_cpu_read_reg(cpu, op.args.dest);
     u8 value = squirm_cpu_read_reg(cpu, op.args.src_a);
+
+    for (u16 i = 0; i < cpu->mmio_count; i++) {
+        squirm_mmio_entry_t entry = cpu->mmio[i];
+        if (entry.start <= addr && addr < entry.end) {
+            if (entry.write == NULL) {
+                return;
+            }
+            entry.write(addr, value);
+            return;
+        }
+    }
+
     squirm_cpu_write8(cpu, addr, value);
 }
 
@@ -257,7 +424,12 @@ OP_HANDLER(sys) {
     (void)op; // unused
     u16 syscall = cpu->reg[BURROW_REG_A];
 
-    syscall_handlers[syscall](cpu);
+    if (syscall >= cpu->syscall_count) {
+        LOG_ERROR("invalid syscall %d\n", syscall);
+        exit(1);
+    }
+
+    cpu->syscalls[syscall](cpu);
 }
 
 // clang-format off

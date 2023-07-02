@@ -1,14 +1,15 @@
+#define _POSIX_C_SOURCE 199309L
 #include "burrow.h"
 #include "log.h"
-#include "stdio.h"
 #include "types.h"
 #include "squirm.h"
 
+#include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <time.h>
-#include <unistd.h>
 
 typedef struct args {
     char* rom_file;
@@ -19,7 +20,7 @@ static void usage(void) {
 }
 
 static void parse_args(int argc, char* argv[], args_t* args) {
-    if (argc < 2 || argc > 3) {
+    if (argc < 2 || argc > 5) {
         usage();
         exit(1);
     }
@@ -42,18 +43,6 @@ static void syscall_print(squirm_cpu_t* cpu) {
     fflush(stdout);
 
     cpu->reg[BURROW_REG_A] = 0;
-}
-
-static void dump_buffer(const u8* buffer, usize buffer_size, usize width) {
-    printf("buffer_size: %ld\n", buffer_size);
-    printf("buffer: [\n");
-    for (usize i = 0; i < buffer_size; i++) {
-        printf("\t0x%02x,", buffer[i]);
-        if (i % width == width - 1) {
-            printf("\n");
-        }
-    }
-    printf("\n]\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -95,20 +84,19 @@ int main(int argc, char* argv[]) {
 
     fclose(rom_file);
 
-    squirm_cpu_t cpu;
-    squirm_cpu_init(&cpu, (squirm_cpu_syscall_fn[]){ syscall_exit, syscall_print }, 2);
-    squirm_cpu_load(&cpu, rom, rom_size);
+    squirm_cpu_t* cpu =
+        squirm_cpu_new((squirm_cpu_syscall_fn[]){ syscall_exit, syscall_print }, 2);
+    squirm_cpu_load(cpu, rom, rom_size);
 
-    dump_buffer(rom, rom_size, 4);
-
-    squirm_cpu_reset(&cpu);
+    squirm_cpu_reset(cpu);
 
     struct timeval start, end;
+
     gettimeofday(&start, NULL);
 
     while (1) {
-        squirm_cpu_step(&cpu);
-        if (cpu.reg[BURROW_REG_FL] & BURROW_FL_FIN) {
+        squirm_cpu_step(cpu);
+        if (cpu->reg[BURROW_REG_FL] & BURROW_FL_FIN) {
             break;
         }
     }
@@ -118,10 +106,12 @@ int main(int argc, char* argv[]) {
     // get elapsed microseconds
     u64 elapsed = (end.tv_sec - start.tv_sec) * 1000000 + end.tv_usec - start.tv_usec;
 
-    printf("Elapsed: %ld us\n", elapsed);
-    printf("Instructions: %ld\n", cpu.executed_op_count);
-
-    printf("Frequency: %ld Hz\n", cpu.executed_op_count * 1000000 / elapsed);
+    LOG_INFO(
+        "Executed %ld instructions in %ld microseconds\n",
+        cpu->executed_op_count,
+        elapsed
+    );
+    LOG_INFO("Calculated frequency: %ld Hz\n", cpu->executed_op_count * 1000000 / elapsed);
 
     free(rom);
 
