@@ -340,7 +340,7 @@ static u8 weave_op_from_str(const char* str, size_t len) {
 }
 
 static void weave_parse_instruction(weave_t* weave) {
-    burrow_op_t op = {0};
+    burrow_op_t op = { 0 };
 
     if (weave->token.ty != WEAVE_TOKEN_IDENTIFIER) {
         LOG_ERROR(
@@ -390,7 +390,6 @@ static void weave_parse_instruction(weave_t* weave) {
             op.regs.dest = weave_parse_register(weave);
             weave_consume_token_type(weave, WEAVE_TOKEN_COMMA);
             op.regs.src_a = weave_parse_register(weave);
-            weave_consume_token_type(weave, WEAVE_TOKEN_COMMA);
             op.regs.src_b = 0;
             break;
         case BURROW_INSTRUCTION_ARG_SCHEME_REG:
@@ -525,31 +524,11 @@ static void weave_advance(weave_t* weave) {
         weave_token_free(&weave->token);
     }
 
-    weave_preprocessor_result_t result = weave_preprocessor_next(weave->preprocessor);
+    weave->token = weave_preprocessor_next(weave->preprocessor);
 
-    if (!result.is_ok) {
-        LOG_ERROR(
-            "preprocessor error at %d:%d: %s",
-            weave->preprocessor->lexer->line,
-            weave->preprocessor->lexer->col,
-            weave_preprocessor_error_str(result.err)
-        );
-        exit(1);
-    } else if (!result.ok.is_ok) {
-        LOG_ERROR(
-            "lexer error at %d:%d: %s",
-            weave->preprocessor->lexer->line,
-            weave->preprocessor->lexer->col,
-            weave_lexer_error_str(result.ok.err)
-        );
-        exit(1);
-    } else {
-        weave->token = result.ok.ok;
+    // weave_print_token(weave->token);
 
-        // weave_print_token(weave->token);
-
-        weave->at_eof = weave->token.ty == WEAVE_TOKEN_EOF;
-    }
+    weave->at_eof = weave->token.ty == WEAVE_TOKEN_EOF;
 }
 
 static void weave_consume_token_type(weave_t* weave, weave_token_ty_t ty) {

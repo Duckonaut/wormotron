@@ -143,6 +143,8 @@ static weave_lexer_result_t weave_lexer_parse_string(weave_lexer_t* lexer) {
     token.pos.line = lexer->line;
     token.pos.col = lexer->col;
 
+    weave_lexer_advance(lexer);
+
     char* buffer = malloc(1024);
     size_t buffer_size = 1024;
     size_t buffer_pos = 0;
@@ -508,16 +510,12 @@ weave_lexer_result_t weave_lexer_next(weave_lexer_t* lexer) {
     }
 
     if (lexer->c == '"') {
-        weave_lexer_advance(lexer);
-
         weave_lexer_result_t string_result = weave_lexer_parse_string(lexer);
 
         return string_result;
     }
 
     if (lexer->c == '\'') {
-        weave_lexer_advance(lexer);
-
         weave_lexer_result_t char_result = weave_lexer_parse_char(lexer);
 
         return char_result;

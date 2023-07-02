@@ -18,6 +18,7 @@ void weave_macro_free(weave_macro_t* macro);
 typedef struct weave_preprocessor {
     weave_lexer_t* lexer;
     weave_token_pos_t macro_start_pos;
+    weave_token_t current_lexer_token;
     char** macro_names;
     weave_macro_t** macros;
     usize num_macros;
@@ -47,9 +48,6 @@ typedef enum weave_preprocessor_error {
 
 const char* weave_preprocessor_error_str(weave_preprocessor_error_t error);
 
-typedef RESULT_TYPE(weave_lexer_result_t, weave_preprocessor_error_t)
-    weave_preprocessor_result_t;
-
 weave_preprocessor_t* weave_preprocessor_new(weave_lexer_t* lexer);
 void weave_preprocessor_free(weave_preprocessor_t* preprocessor);
-weave_preprocessor_result_t weave_preprocessor_next(weave_preprocessor_t* preprocessor);
+weave_token_t weave_preprocessor_next(weave_preprocessor_t* preprocessor);

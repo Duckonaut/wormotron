@@ -65,16 +65,27 @@ void weave_preprocessor_free(weave_preprocessor_t* preprocessor) {
     free(preprocessor);
 }
 
-#define WEAVE_PREPROCESSOR_ADVANCE_LEXER(RESULT)                                               \
-    do {                                                                                       \
-        weave_lexer_result_t lexer_result = weave_lexer_next(preprocessor->lexer);             \
-        if (!lexer_result.is_ok) {                                                             \
-            RESULT.is_ok = true;                                                               \
-            RESULT.ok = lexer_result;                                                          \
-            return RESULT;                                                                     \
-        }                                                                                      \
-        RESULT.ok = lexer_result;                                                              \
-    } while (0)
+void weave_preprocessor_advance(weave_preprocessor_t* preprocessor) {
+    weave_lexer_result_t lexer_result = weave_lexer_next(preprocessor->lexer);
+    if (!lexer_result.is_ok) {
+        LOG_ERROR(
+            "lexer error at %d:%d: %s",
+            preprocessor->lexer->line,
+            preprocessor->lexer->col,
+            weave_lexer_error_str(lexer_result.err)
+        );
+        exit(1);
+    }
+
+    weave_token_t token = lexer_result.ok;
+
+    preprocessor->current_lexer_token = token;
+
+    if (token.ty == WEAVE_TOKEN_EOF) {
+        preprocessor->at_eof = true;
+        return;
+    }
+}
 
 static void weave_preprocessor_register_macro(weave_preprocessor_t* preprocessor) {
     weave_lexer_result_t lexer_result = weave_lexer_next(preprocessor->lexer);
@@ -256,11 +267,8 @@ static void weave_preprocessor_register_macro(weave_preprocessor_t* preprocessor
     }
 }
 
-static weave_preprocessor_result_t
+static weave_token_t
 weave_preprocessor_step_current_macro_invocation(weave_preprocessor_t* preprocessor) {
-    weave_preprocessor_result_t result;
-    result.is_ok = true;
-
     weave_macro_t* macro = preprocessor->current_macro;
 
     if (preprocessor->in_macro_arg_expansion) {
@@ -281,10 +289,7 @@ weave_preprocessor_step_current_macro_invocation(weave_preprocessor_t* preproces
             preprocessor->current_macro_token_index++;
         }
 
-        result.is_ok = true;
-        result.ok.is_ok = true;
-        result.ok.ok = token_to_return;
-        return result;
+        return token_to_return;
     }
 
     if (preprocessor->current_macro_token_index == macro->len_tokens) {
@@ -302,13 +307,7 @@ weave_preprocessor_step_current_macro_invocation(weave_preprocessor_t* preproces
         preprocessor->current_macro_arg_expansion_index = 0;
         preprocessor->in_macro_arg_expansion = false;
 
-        result.is_ok = true;
-        result.ok.is_ok = true;
-        result.ok.ok.ty = WEAVE_TOKEN_NEWLINE;
-        result.ok.ok.pos.line = preprocessor->lexer->line;
-        result.ok.ok.pos.col = preprocessor->lexer->col;
-
-        return result;
+        return preprocessor->current_lexer_token;
     }
 
     weave_token_t token =
@@ -364,39 +363,38 @@ weave_preprocessor_step_current_macro_invocation(weave_preprocessor_t* preproces
         return weave_preprocessor_step_current_macro_invocation(preprocessor);
     }
 
-    result.is_ok = true;
-    result.ok.is_ok = true;
-    result.ok.ok = token;
-
-    return result;
+    return token;
 }
 
-weave_preprocessor_result_t weave_preprocessor_next(weave_preprocessor_t* preprocessor) {
-    weave_preprocessor_result_t result;
-    result.is_ok = true;
-
+weave_token_t weave_preprocessor_next(weave_preprocessor_t* preprocessor) {
     if (preprocessor->current_macro != NULL) {
         return weave_preprocessor_step_current_macro_invocation(preprocessor);
     }
 
-    WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+    weave_preprocessor_advance(preprocessor);
 
-    weave_token_t token = result.ok.ok;
+    weave_token_t token = preprocessor->current_lexer_token;
 
     if (token.ty == WEAVE_TOKEN_BANG) {
-        WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+        weave_preprocessor_advance(preprocessor);
 
-        token = result.ok.ok;
+        token = preprocessor->current_lexer_token;
 
         switch (token.ty) {
             case WEAVE_TOKEN_MACRO:
                 weave_preprocessor_register_macro(preprocessor);
-                WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+                weave_preprocessor_advance(preprocessor);
+
+                token = preprocessor->current_lexer_token;
                 break;
             default:
-                result.is_ok = false;
-                result.err = WEAVE_PREPROCESSOR_ERROR_UNKNOWN_DIRECTIVE;
-                return result;
+                LOG_ERROR(
+                    "unknown preprocessor directive '%s' at %d:%d\n",
+                    token.val.str_val.val,
+                    preprocessor->lexer->line,
+                    preprocessor->lexer->col
+                );
+                exit(1);
         }
     }
 
@@ -419,9 +417,9 @@ weave_preprocessor_result_t weave_preprocessor_next(weave_preprocessor_t* prepro
                     preprocessor->current_macro->len_args
                 );
 
-                WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+                weave_preprocessor_advance(preprocessor);
 
-                token = result.ok.ok;
+                token = preprocessor->current_lexer_token;
 
                 // store macro invocation args
                 for (usize j = 0; j < preprocessor->current_macro->len_args; j++) {
@@ -447,9 +445,9 @@ weave_preprocessor_result_t weave_preprocessor_next(weave_preprocessor_t* prepro
 
                         preprocessor->current_macro_args[j].arg_token_len++;
 
-                        WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
+                        weave_preprocessor_advance(preprocessor);
 
-                        token = result.ok.ok;
+                        token = preprocessor->current_lexer_token;
                     }
 
                     if (token.ty == WEAVE_TOKEN_NEWLINE) {
@@ -464,26 +462,18 @@ weave_preprocessor_result_t weave_preprocessor_next(weave_preprocessor_t* prepro
                         } else {
                             break;
                         }
+                    } else if (token.ty == WEAVE_TOKEN_COMMA) {
+                        weave_preprocessor_advance(preprocessor);
+
+                        token = preprocessor->current_lexer_token;
                     }
-
-                    WEAVE_PREPROCESSOR_ADVANCE_LEXER(result);
-
-                    token = result.ok.ok;
                 }
 
-                if (token.ty != WEAVE_TOKEN_NEWLINE) {
-                    LOG_ERROR(
-                        "expected newline after macro invocation at %d:%d\n",
-                        preprocessor->lexer->line,
-                        preprocessor->lexer->col
-                    );
-                    exit(1);
-                }
                 weave_token_free(&token_to_free);
                 return weave_preprocessor_step_current_macro_invocation(preprocessor);
             }
         }
     }
 
-    return result;
+    return token;
 }
