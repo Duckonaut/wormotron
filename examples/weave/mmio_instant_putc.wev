@@ -1,0 +1,8 @@
+.start:
+    ldi %a, 'a'
+
+.loop:
+    stib %a, 0xff00
+    jmp .loop
+    xor %a, %a, %a
+    sys

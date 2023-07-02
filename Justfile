@@ -44,8 +44,8 @@ dist: clean release
 	cp -r ./assets ./dist
 
 [unix]
-run: build
-	./build/wormotron
+run ROM="a.out": build
+	./build/wormotron "{{ROM}}"
 
 [windows]
 run: build

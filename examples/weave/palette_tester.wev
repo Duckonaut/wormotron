@@ -1,0 +1,91 @@
+!macro inc a:
+    ldi %m, 1
+    add $a, $a, %m;
+
+!macro dec a:
+    ldi %m, 1
+    sub $a, $a, %m;
+
+!macro cmpi a imm:
+    ldi %m, $imm
+    sub %m, $a, %m;
+
+!macro modi dest a imm:
+    ldi %m, $imm
+    mod $dest, $a, %m;
+
+!macro addi dest src imm:
+    ldi %m, $imm
+    add $dest, $src, %m;
+
+.start:
+    ldi %d, 0
+.fillscreen:
+    ldi %a, 0x8000
+    ldi %c, 0
+
+.loop:
+    modi %b, %a, 8
+    ldi %m, 2
+    mul %b, %b, %m
+    ldi %m, 4
+    shl %e, %b, %m
+    or %b, %e, %b
+    inc %b
+
+    strb %a, %b
+    inc %a
+
+    inc %c
+    cmpi %c, 0x1B00 # 144x96 / 2
+    jz .palette_start
+    jmp .loop
+
+.palette_start:
+    ldi %a, 0xc000
+    ldi %b, 16
+    ldi %c, 4
+    mul %c, %b, %c
+
+    sub %a, %a, %c
+    dec %a
+
+    ldi %b, 0xFF
+    ldi %c, 0
+    ldi %z, 0
+
+.palette_color_loop:
+    cmpi %c, 16
+    jz .end
+
+    sub %m, %c, %d
+    jz .palette_white
+    strb %a, %z
+    inc %a
+    strb %a, %z
+    inc %a
+    strb %a, %z
+    inc %a
+    strb %a, %z
+    inc %a
+    inc %c
+    jmp .palette_color_loop
+
+.palette_white:
+    strb %a, %b
+    inc %a
+    strb %a, %b
+    inc %a
+    strb %a, %b
+    inc %a
+    strb %a, %b
+    inc %a
+    inc %c
+    jmp .palette_color_loop
+
+.end:
+    inc %d
+    modi %d, %d, 16
+    ldi %a, 2
+    sys
+    jmp .palette_start # loop forever

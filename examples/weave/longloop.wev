@@ -1,4 +1,4 @@
-!macro iters_sqrt: 10000;
+!macro iters_sqrt: 1000;
 
 .start:
     ldi %b, iters_sqrt

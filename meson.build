@@ -69,6 +69,9 @@ utils = subproject('utils')
 
 wt_src = [
   'src/main.c',
+  'src/rom.c',
+  'src/graphics.c',
+  'src/wormotron.c',
 ]
 
 wt_inc = [

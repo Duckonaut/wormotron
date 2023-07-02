@@ -4,14 +4,18 @@
 
 !macro addi dest a imm:
     ldi %m, $imm
-    add $dest, $a, %imm;
+    add $dest, $a, %m;
 
 !macro subi dest a imm:
     ldi %m, $imm
-    add $dest, $a, %imm;
+    add $dest, $a, %m;
 
 !macro cmp a b:
     sub %m, $a, $b;
+
+!macro cmpi a imm:
+    ldi %m, $imm
+    sub %m, $a, %m;
 
 !macro push a:
     str %sp, $a
@@ -24,7 +28,7 @@
 
 !macro strii dest v:
     ldi %m, $v
-    stri %m, $dest;
+    sti %m, $dest;
 
 .start:
     strii 0x7f00, 0x1   # set value of 0x7f00 to 1.
@@ -32,13 +36,15 @@
     ldi %a, 0x41 # set the value of %a to 0x41 ('A').
     ldi %c, 0x1000 # set the value of %c to 0x1000.
 
-.BUFLOOP
+.loop:
     strb %c, %a # set the value of the address stored in %c to %a.
     addi %a, %a, 1 # add 1 to %a.
     addi %c, %c, 1 # add 1 to %c.
-    cmp %a, 0x5a # compare %a to 0x5a ('Z').
-    jl .BUFLOOP # if %a is less than 0x5a, jump to .BUFLOOP.
+    cmpi %a, 0x5a # compare %a to 0x5a ('Z').
+    jz .end # if %a is not 0x5a, jump to .BUFLOOP.
+    jmp .loop
 
+.end:
     ldi %a, 0x1
     ldi %b, 0x1000 # set the value of %b to 0x1000.
     ldi %c, 25

@@ -1,0 +1,19 @@
+!macro stiib dest val:
+    ldi %m, $val
+    stib %m, $dest;
+
+.start:
+    stiib 0xff00, 'H'
+    stiib 0xff00, 'e'
+    stiib 0xff00, 'l'
+    stiib 0xff00, 'l'
+    stiib 0xff00, 'o'
+    stiib 0xff00, ' '
+    stiib 0xff00, 'w'
+    stiib 0xff00, 'o'
+    stiib 0xff00, 'r'
+    stiib 0xff00, 'l'
+    stiib 0xff00, 'd'
+    stiib 0xff00, '\n'
+    ldi %a, 0
+    sys
