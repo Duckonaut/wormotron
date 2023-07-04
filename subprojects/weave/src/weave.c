@@ -457,7 +457,11 @@ static void weave_run(weave_t* weave) {
                 u16 addr = label->unresolved_refs[j];
                 usize addr_full = (usize)addr;
 
+#ifdef _WIN32
+                fseek(weave->output, addr_full + 1, SEEK_SET);
+#else
                 fseek(weave->output, addr_full, SEEK_SET);
+#endif
                 u8 low_byte = label->addr & 0xFF;
                 u8 high_byte = (label->addr >> 8) & 0xFF;
                 // write high byte first
