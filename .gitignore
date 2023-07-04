@@ -2,3 +2,5 @@ build/
 release/
 .cache/
 a.out
+subprojects/SDL2-*/
+subprojects/packagecache/

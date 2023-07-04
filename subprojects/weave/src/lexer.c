@@ -4,6 +4,25 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef _WIN32
+char* strndup(const char* s, size_t n) {
+    char* result;
+    size_t len = strlen(s);
+
+    if (n < len) {
+        len = n;
+    }
+
+    result = malloc(len + 1);
+    if (!result) {
+        return 0;
+    }
+
+    result[len] = '\0';
+    return (char*)memcpy(result, s, len);
+}
+#endif
+
 const char* weave_token_ty_str(weave_token_ty_t ty) {
     switch (ty) {
         case WEAVE_TOKEN_INVALID:

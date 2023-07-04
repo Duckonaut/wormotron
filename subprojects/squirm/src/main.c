@@ -8,7 +8,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef _WIN32
 #include <sys/time.h>
+#endif
 #include <time.h>
 
 typedef struct args {
@@ -90,9 +92,11 @@ int main(int argc, char* argv[]) {
 
     squirm_cpu_reset(cpu);
 
+#ifndef _WIN32
     struct timeval start, end;
 
     gettimeofday(&start, NULL);
+#endif
 
     while (1) {
         squirm_cpu_step(cpu);
@@ -101,6 +105,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
+#ifndef _WIN32
     gettimeofday(&end, NULL);
 
     // get elapsed microseconds
@@ -112,6 +117,7 @@ int main(int argc, char* argv[]) {
         elapsed
     );
     LOG_INFO("Calculated frequency: %ld Hz\n", cpu->executed_op_count * 1000000 / elapsed);
+#endif
 
     free(rom);
 

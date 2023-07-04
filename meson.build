@@ -24,7 +24,7 @@ project('wormotron', 'c',
   version : '0.1.0',
   default_options : [
     'warning_level=3',
-    'c_std=c2x',
+    'c_std=c11',
   ],
 )
 
@@ -47,7 +47,7 @@ endif
 
 # setup SDL2
 
-sdl2 = dependency('sdl2', required : true)
+sdl2 = dependency('sdl2', required : true, static : static_link_libs)
 
 # setup `squirm` as subproject
 

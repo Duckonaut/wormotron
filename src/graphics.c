@@ -6,7 +6,6 @@
 
 #include "SDL_pixels.h"
 #include "SDL.h"
-#include "SDL_image.h"
 #include "SDL_render.h"
 #include "SDL_hints.h"
 #include "SDL_thread.h"

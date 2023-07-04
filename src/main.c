@@ -39,6 +39,8 @@ void terminate_handler(int signal) {
     g_stop = true;
 }
 
+// TODO: This is a hack to get around SDL's main macro.
+#undef main
 int main(int argc, char* argv[]) {
     log_init();
 
