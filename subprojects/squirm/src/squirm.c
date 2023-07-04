@@ -106,7 +106,7 @@ static inline void squirm_cpu_set_flag(squirm_cpu_t* cpu, u16 flag) {
 }
 
 static inline u16 squirm_op_imm(squirm_op_t op) {
-    return (op.args.src_a << 8) | op.args.src_b;
+    return (op.args.src_a << 8) | (op.args.src_b & 0xFF);
 }
 
 OP_HANDLER(nop) {
@@ -477,7 +477,7 @@ void squirm_cpu_step(squirm_cpu_t* cpu) {
     squirm_op_t op = squirm_cpu_decode_op(cpu);
 
     if (op.op >= BURROW_OP_COUNT) {
-        LOG_ERROR("invalid opcode %02x\n", op.op);
+        LOG_ERROR("invalid opcode %02x at %04x\n", op.op, cpu->reg[BURROW_REG_IP]);
         squirm_cpu_set_flag(cpu, BURROW_FL_FIN);
         return;
     }
