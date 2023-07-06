@@ -174,3 +174,17 @@ static inline u8 burrow_register_from_str(const char* str, size_t len) {
 
     return 0xff;
 }
+
+static inline const char* burrow_register_to_str(u8 reg) {
+    if (reg <= BURROW_REG_Z) {
+        return (const char[]){(char)(reg - BURROW_REG_A + 'a'), '\0'};
+    } else if (reg == BURROW_REG_IP) {
+        return "ip";
+    } else if (reg == BURROW_REG_SP) {
+        return "sp";
+    } else if (reg == BURROW_REG_FL) {
+        return "fl";
+    } else {
+        return "??";
+    }
+}
