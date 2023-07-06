@@ -16,21 +16,21 @@
 
 static const SDL_Color k_default_palette[16] = {
     { .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xFF },
-    { .r = 0x00, .g = 0x00, .b = 0xFF, .a = 0xFF },
-    { .r = 0x00, .g = 0xFF, .b = 0x00, .a = 0xFF },
-    { .r = 0x00, .g = 0xFF, .b = 0xFF, .a = 0xFF },
-    { .r = 0xFF, .g = 0x00, .b = 0x00, .a = 0xFF },
-    { .r = 0xFF, .g = 0x00, .b = 0xFF, .a = 0xFF },
-    { .r = 0xFF, .g = 0xFF, .b = 0x00, .a = 0xFF },
-    { .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = 0xFF },
-    { .r = 0x3f, .g = 0x3f, .b = 0x3f, .a = 0xFF },
-    { .r = 0x00, .g = 0x00, .b = 0x7f, .a = 0xFF },
-    { .r = 0x00, .g = 0x7f, .b = 0x00, .a = 0xFF },
-    { .r = 0x00, .g = 0x7f, .b = 0x7f, .a = 0xFF },
-    { .r = 0x7f, .g = 0x00, .b = 0x00, .a = 0xFF },
-    { .r = 0x7f, .g = 0x00, .b = 0x7f, .a = 0xFF },
-    { .r = 0x7f, .g = 0x7f, .b = 0x00, .a = 0xFF },
-    { .r = 0xbf, .g = 0xbf, .b = 0xbf, .a = 0xFF },
+    { .r = 0x5F, .g = 0x57, .b = 0x4F, .a = 0xFF },
+    { .r = 0xc2, .g = 0xc3, .b = 0xc7, .a = 0xFF },
+    { .r = 0xff, .g = 0xf1, .b = 0xe8, .a = 0xFF },
+    { .r = 0x43, .g = 0x00, .b = 0x67, .a = 0xFF },
+    { .r = 0x94, .g = 0x21, .b = 0x6a, .a = 0xFF },
+    { .r = 0xff, .g = 0x00, .b = 0x4d, .a = 0xFF },
+    { .r = 0x36, .g = 0x59, .b = 0x87, .a = 0xFF },
+    { .r = 0x3f, .g = 0xa6, .b = 0x6f, .a = 0xFF },
+    { .r = 0x50, .g = 0xe1, .b = 0x12, .a = 0xFF },
+    { .r = 0x00, .g = 0x33, .b = 0xff, .a = 0xFF },
+    { .r = 0x29, .g = 0xad, .b = 0xff, .a = 0xFF },
+    { .r = 0x00, .g = 0xff, .b = 0xcc, .a = 0xFF },
+    { .r = 0xab, .g = 0x52, .b = 0x36, .a = 0xFF },
+    { .r = 0xff, .g = 0x84, .b = 0x26, .a = 0xFF },
+    { .r = 0xff, .g = 0xdd, .b = 0x34, .a = 0xFF },
 };
 
 wormotron_graphics_t* wormotron_graphics_new(void) {
@@ -95,6 +95,10 @@ wormotron_graphics_t* wormotron_graphics_new(void) {
 
     for (int i = 0; i < 16; i++) {
         graphics->palette[i] = k_default_palette[i];
+        graphics->ram[WT_GRAPHICS_PALETTE_START + i * 4 + 0] = k_default_palette[i].r;
+        graphics->ram[WT_GRAPHICS_PALETTE_START + i * 4 + 1] = k_default_palette[i].g;
+        graphics->ram[WT_GRAPHICS_PALETTE_START + i * 4 + 2] = k_default_palette[i].b;
+        graphics->ram[WT_GRAPHICS_PALETTE_START + i * 4 + 3] = k_default_palette[i].a;
     }
 
     // Create a texture.
@@ -133,6 +137,12 @@ void wormotron_graphics_write(wormotron_graphics_t* graphics, u16 address, u8 va
     assert(address < WT_GRAPHICS_RAM_SIZE);
 
     graphics->ram[address] = value;
+}
+
+u8 wormotron_graphics_read(wormotron_graphics_t* graphics, u16 address) {
+    assert(address < WT_GRAPHICS_RAM_SIZE);
+
+    return graphics->ram[address];
 }
 
 void wormotron_graphics_clear(wormotron_graphics_t* graphics) {

@@ -58,6 +58,7 @@ void wormotron_graphics_flush(wormotron_graphics_t* graphics);
 void wormotron_graphics_present(wormotron_graphics_t* graphics);
 
 void wormotron_graphics_write(wormotron_graphics_t* graphics, u16 address, u8 value);
+u8 wormotron_graphics_read(wormotron_graphics_t* graphics, u16 address);
 // void wormotron_graphics_set_mode(
 //     wormotron_graphics_t* graphics,
 //     wormotron_graphics_mode_t mode

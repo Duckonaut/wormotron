@@ -47,6 +47,10 @@ static void mmio_graphics_write(u16 addr, u8 val) {
     wormotron_graphics_write(g_wormotron->graphics, addr - WT_GRAPHICS_RAM_START, val);
 }
 
+static u8 mmio_graphics_read(u16 addr) {
+    return wormotron_graphics_read(g_wormotron->graphics, addr - WT_GRAPHICS_RAM_START);
+}
+
 // clang-format off
 static squirm_mmio_entry_t k_mmio[] = {
     {
@@ -59,7 +63,7 @@ static squirm_mmio_entry_t k_mmio[] = {
         .start = WT_GRAPHICS_RAM_START,
         .end = WT_GRAPHICS_RAM_START + WT_GRAPHICS_RAM_SIZE,
         .write = mmio_graphics_write,
-        .read = NULL
+        .read = mmio_graphics_read
     },
 };
 // clang-format on
