@@ -1,8 +1,10 @@
+#include "utils.h"
 #define _POSIX_C_SOURCE 199309L
 #include "burrow.h"
 #include "log.h"
 #include "types.h"
 #include "squirm.h"
+#include "squirm_dbg.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -15,19 +17,40 @@
 
 typedef struct args {
     char* rom_file;
+    bool debug;
 } args_t;
 
 static void usage(void) {
-    printf("Usage: squirm <rom_file>\n");
+    printf("Usage: squirm <rom_file> [-d, --debug]\n");
 }
 
-static void parse_args(int argc, char* argv[], args_t* args) {
-    if (argc < 2 || argc > 5) {
+static args_t parse_args(int argc, char* argv[]) {
+    args_t args = {0};
+    if (argc < 2 || argc > 3) {
         usage();
         exit(1);
     }
 
-    args->rom_file = argv[1];
+    bool rom_file_exists = false;
+
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0) {
+            args.debug = true;
+        } else if (!rom_file_exists) {
+            args.rom_file = argv[i];
+            rom_file_exists = true;
+        } else {
+            usage();
+            exit(1);
+        }
+    }
+
+    if (!rom_file_exists) {
+        usage();
+        exit(1);
+    }
+
+    return args;
 }
 
 static void syscall_exit(squirm_cpu_t* cpu) {
@@ -52,8 +75,7 @@ int main(int argc, char* argv[]) {
 
     log_init();
 
-    args_t args;
-    parse_args(argc, argv, &args);
+    args_t args = parse_args(argc, argv);
 
     FILE* rom_file = fopen(args.rom_file, "r");
 
@@ -86,11 +108,22 @@ int main(int argc, char* argv[]) {
 
     fclose(rom_file);
 
+    if (args.debug) {
+        dump_buffer(rom, rom_size, 4);
+    }
+
     squirm_cpu_t* cpu =
         squirm_cpu_new((squirm_cpu_syscall_fn[]){ syscall_exit, syscall_print }, 2);
     squirm_cpu_load(cpu, rom, rom_size);
 
     squirm_cpu_reset(cpu);
+
+    squirm_dbg_t* dbg = NULL;
+
+    if (args.debug) {
+        LOG_INFO("Debugging enabled\n");
+        dbg = squirm_dbg_new(cpu);
+    }
 
 #ifndef _WIN32
     struct timeval start, end;
@@ -98,10 +131,14 @@ int main(int argc, char* argv[]) {
     gettimeofday(&start, NULL);
 #endif
 
-    while (1) {
-        squirm_cpu_step(cpu);
-        if (cpu->reg[BURROW_REG_FL] & BURROW_FL_FIN) {
-            break;
+    if (args.debug) {
+        squirm_dbg_run(dbg);
+    } else {
+        while (1) {
+            squirm_cpu_step(cpu);
+            if (cpu->reg[BURROW_REG_FL] & BURROW_FL_FIN) {
+                break;
+            }
         }
     }
 
@@ -118,6 +155,11 @@ int main(int argc, char* argv[]) {
     );
     LOG_INFO("Calculated frequency: %ld Hz\n", cpu->executed_op_count * 1000000 / elapsed);
 #endif
+
+    if (args.debug) {
+        squirm_dbg_free(dbg);
+    }
+    squirm_cpu_free(cpu);
 
     free(rom);
 

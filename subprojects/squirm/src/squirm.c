@@ -208,11 +208,11 @@ OP_HANDLER(div) {
     u8 dest = op.args.dest;
     u8 a = op.args.src_a;
     u8 b = op.args.src_b;
-    
+
     u16 b_value = squirm_cpu_read_reg(cpu, b);
 
     if (b_value == 0) {
-        LOG_ERROR("division by zero\n");
+        LOG_ERROR("division by zero at %04x\n", cpu->reg[BURROW_REG_IP] - 4);
         exit(1);
     }
 
@@ -234,7 +234,7 @@ OP_HANDLER(mod) {
     u16 b_value = squirm_cpu_read_reg(cpu, b);
 
     if (b_value == 0) {
-        LOG_ERROR("division by zero\n");
+        LOG_ERROR("division by zero at %04x\n", cpu->reg[BURROW_REG_IP] - 4);
         exit(1);
     }
 
@@ -326,6 +326,7 @@ OP_HANDLER(shr) {
 
 OP_HANDLER(jmp) {
     u16 addr = squirm_op_imm(op);
+
     cpu->reg[BURROW_REG_IP] = addr;
 }
 
@@ -461,7 +462,7 @@ static const squirm_cpu_op_fn k_op_handlers[BURROW_OP_COUNT] = {
 
 // clang-format on
 
-static squirm_op_t squirm_cpu_decode_op(squirm_cpu_t* cpu) {
+squirm_op_t squirm_cpu_decode_op(squirm_cpu_t* cpu) {
     squirm_op_t op;
     u16 ip = cpu->reg[BURROW_REG_IP];
 
@@ -474,6 +475,12 @@ static squirm_op_t squirm_cpu_decode_op(squirm_cpu_t* cpu) {
 }
 
 void squirm_cpu_step(squirm_cpu_t* cpu) {
+    if (cpu->reg[BURROW_REG_IP] % 4 != 0) {
+        LOG_ERROR("unaligned instruction pointer %04x\n", cpu->reg[BURROW_REG_IP]);
+        squirm_cpu_set_flag(cpu, BURROW_FL_FIN);
+        return;
+    }
+
     squirm_op_t op = squirm_cpu_decode_op(cpu);
 
     if (op.op >= BURROW_OP_COUNT) {

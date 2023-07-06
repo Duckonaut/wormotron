@@ -22,6 +22,7 @@ squirm_src = [
 squirm_bin_src = [
   squirm_src,
   'src/main.c',
+  'src/squirm_dbg.c',
 ]
 
 utils = subproject('utils')

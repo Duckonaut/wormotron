@@ -54,4 +54,5 @@ void squirm_cpu_add_mmio_entry(squirm_cpu_t* cpu, squirm_mmio_entry_t entry);
 void squirm_cpu_reset(squirm_cpu_t* cpu);
 void squirm_cpu_load(squirm_cpu_t* cpu, u8* data, u16 size);
 void squirm_cpu_load_at(squirm_cpu_t* cpu, u16 addr, u8* data, u16 size);
+squirm_op_t squirm_cpu_decode_op(squirm_cpu_t* cpu);
 void squirm_cpu_step(squirm_cpu_t* cpu);
