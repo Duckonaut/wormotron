@@ -1,0 +1,97 @@
+!macro mov dest src:
+    ldi %m, 0
+    add $dest, $src, %m;
+
+!macro inc a:
+    ldi %m, 1
+    add $a, $a, %m;
+
+!macro dec a:
+    ldi %m, 1
+    sub $a, $a, %m;
+
+!macro cmpi a imm:
+    ldi %m, $imm
+    sub %m, $a, %m;
+
+!macro modi dest a imm:
+    ldi %m, $imm
+    mod $dest, $a, %m;
+
+!macro addi dest src imm:
+    ldi %m, $imm
+    add $dest, $src, %m;
+
+!macro subi dest src imm:
+    ldi %m, $imm
+    sub $dest, $src, %m;
+
+!macro divi dest src imm:
+    ldi %m, $imm
+    div $dest, $src, %m;
+
+!macro muli dest src imm:
+    ldi %m, $imm
+    mul $dest, $src, %m;
+
+!macro shli dest src imm:
+    ldi %m, $imm
+    shl $dest, $src, %m;
+
+!macro shri dest src imm:
+    ldi %m, $imm
+    shr $dest, $src, %m;
+
+# 0x8000 is the start of pixel VRAM data
+# screen is 144x96 pixels, but each pixel is 4 bits and packed into a byte
+# so effectively 72 * 96 bytes to write
+
+# C equivalent:
+# for (u16 y = 0; y < 96; y++) {
+#     for (u16 x = 0; x < 72; x++) {
+#         u8 col = (y / (96 / 2)) * 8 + (x / (144 / 8)) * 2; // create a 8x2 grid of colours
+#         col = (col << 4) + col; // duplicate the colour in the upper 4 bits
+#         u16 addr = (y * 72 + x) + 0x8000; // calculate the address of the pixel
+#         vram[addr] = col; // write the colour to the pixel
+#     }
+# }
+# while (1) {}
+
+.start:
+.fillscreen:
+    # u16 y = 0;
+    ldi %c, 0 # y
+
+.outerloop:
+    # u16 x = 0;
+    ldi %b, 0 # x
+.innerloop:
+    # u8 col = (y / (96 / 2)) * 8 + (x / (144 / 8)) * 2;
+    divi %d, %c, 48
+    muli %d, %d, 8
+    divi %e, %b, 9
+    add %d, %d, %e
+    # col = (col << 4) + col;
+    mov %e, %d
+    shli %e, %e, 4
+    add %d, %d, %e
+    # addr = (y * 72 + x) + 0x8000;
+    muli %a, %c, 72
+    add %a, %a, %b
+    addi %a, %a, 0x8000
+    # vram[addr] = col;
+    strb %a, %d
+
+    # x++;
+    inc %b
+    cmpi %b, 72
+    jz .outerloopend
+    jmp .innerloop
+.outerloopend:
+    inc %c
+    cmpi %c, 96
+    jz .end
+    jmp .outerloop
+
+.end:
+    jmp .end
