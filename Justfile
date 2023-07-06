@@ -58,3 +58,7 @@ weave IN OUT="a.out": build
 [unix]
 squirm IN: build
 	./build/subprojects/squirm/squirm "{{IN}}"
+
+[unix]
+squirmdbg IN: build
+	./build/subprojects/squirm/squirm -d "{{IN}}"
